@@ -1,11 +1,12 @@
-import React, { useState, createContext, useContext, useMemo, useEffect } from "react";
+import React, { useState, createContext, useContext, useMemo, useEffect, useRef } from "react";
 import { processReportDescription } from "../services/eGovApi";
 
 import {
   Shield, FileText, Clock, CheckCircle2, Bell, Menu, Plus, Filter,
   MoreVertical, ChevronLeft, Sparkles, Calendar, MapPin, Image as ImageIcon,
-  Camera, Lock, Copy, Home, PlusSquare, User, Ghost, Footprints, Wallet,
-  Check, Landmark, ShieldOff
+  Lock, Copy, Home, PlusSquare, User, Ghost, Footprints, Wallet,
+  Check, Landmark, ShieldOff, Siren, Flame, AlertTriangle, 
+  TrendingUp, Baby, HeartHandshake, Fuel, Scissors
 } from "lucide-react";
 
 /* =========================================================================
@@ -22,11 +23,35 @@ const mockUser = {
    src/data/mockReports.js
    ========================================================================= */
 const CATEGORY = {
-  scam: { icon: Shield, bg: "bg-blue-50", fg: "text-blue-600" },
-  onlineScam: { icon: Ghost, bg: "bg-purple-50", fg: "text-purple-600" },
-  crime: { icon: Footprints, bg: "bg-red-50", fg: "text-red-500" },
-  ofw: { icon: ShieldOff,       bg: "bg-pink-50",   fg: "text-pink-600"   },
-  other: { icon: Wallet, bg: "bg-green-50", fg: "text-green-600" },
+  // Crime → red, footprints/detective feel
+  crime:              { icon: Footprints,    bg: "bg-red-50",     fg: "text-red-500"    },
+
+  // Red Tape → bureaucracy, gray/slate
+  redtape:            { icon: Scissors,      bg: "bg-slate-50",   fg: "text-slate-500"  },
+
+  // Scam → ghost/deception, purple
+  scam:               { icon: Ghost,         bg: "bg-purple-50",  fg: "text-purple-600" },
+
+  // Child Abuse → baby, amber/warm warning
+  childabuse:         { icon: Baby,          bg: "bg-amber-50",   fg: "text-amber-600"  },
+
+  // Women Abuse → heart/support, pink
+  womenabuse:         { icon: HeartHandshake, bg: "bg-pink-50",   fg: "text-pink-600"   },
+
+  // Overpricing → trending up, orange
+  overpricing:        { icon: TrendingUp,    bg: "bg-orange-50",  fg: "text-orange-600" },
+
+  // Fire → flame, red-orange
+  fire:               { icon: Flame,         bg: "bg-red-50",     fg: "text-red-600"    },
+
+  // Accident → siren/alert, yellow
+  accident:           { icon: Siren,         bg: "bg-yellow-50",  fg: "text-yellow-600" },
+
+  // Gas Station Concerns → fuel, green
+  gasstationconcerns: { icon: Fuel,          bg: "bg-green-50",   fg: "text-green-600"  },
+
+  // Fallback
+  other:              { icon: AlertTriangle, bg: "bg-gray-50",    fg: "text-gray-500"   },
 };
 
 const STATUS = {
@@ -59,7 +84,7 @@ function ReportsProvider({ children }) {
   );
 
   async function addReport(draft) {
-    const scannedDescription = await processReportDescription(draft.description, draft.location); 
+    const scannedDescription = await processReportDescription(draft.description, draft.location, draft.images); 
     console.log(scannedDescription);
     
     const referenceNumber = scannedDescription.caseNumber;
@@ -67,7 +92,7 @@ function ReportsProvider({ children }) {
       id: `r${Date.now()}`,
       referenceNumber,
       title: scannedDescription.title,
-      category: scannedDescription.reportType.toLowerCase(), 
+      category: scannedDescription.reportType.toLowerCase().replace(/\s+/g, ""),
       typeLabel: scannedDescription.reportType,
       handler: scannedDescription.assignedAgency,
       timeStamp: Date.now(),
@@ -339,6 +364,8 @@ function CreateReportScreen({ onNavigate, onSubmitted }) {
   const [time, setTime] = useState("09:41 AM");
   const [location, setLocation] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [images, setImages] = useState([]); // array of { base64, name }
+  const fileInputRef = useRef(null);
 
   async function handleSubmit() {
     if (!description.trim()) return;
@@ -352,11 +379,38 @@ function CreateReportScreen({ onNavigate, onSubmitted }) {
         date,
         time,
         location,
+        images: images.map((img) => img.base64), // pass base64 strings
       });
       onSubmitted(newReport.id);
     } finally {
       setIsLoading(false);
     }
+  }
+
+  function handleFileChange(e) {
+    const files = Array.from(e.target.files || []);
+    // Only images, max 3 total
+    const remaining = 3 - images.length;
+    const toProcess = files.slice(0, remaining);
+
+    toProcess.forEach((file) => {
+      if (!file.type.startsWith("image/")) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setImages((prev) => {
+          if (prev.length >= 3) return prev;
+          return [...prev, { base64: ev.target.result, name: file.name }];
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Reset input so the same file can be re-added after removal
+    e.target.value = "";
+  }
+
+  function removeImage(index) {
+    setImages((prev) => prev.filter((_, i) => i !== index));
   }
 
   if (isLoading) return <AnalyzingScreen />;
@@ -384,7 +438,6 @@ function CreateReportScreen({ onNavigate, onSubmitted }) {
           <span className="absolute bottom-2 right-3 text-xs text-gray-300">{description.length}/1000</span>
         </div>
 
-        
         <label className="text-sm font-semibold text-gray-900">Where did it happen?</label>
         <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-3 mt-2 mb-5">
           <MapPin size={16} className="text-gray-400" />
@@ -396,17 +449,61 @@ function CreateReportScreen({ onNavigate, onSubmitted }) {
           />
         </div>
 
+        {/* Image upload */}
         <label className="text-sm font-semibold text-gray-900">
-          Upload images <span className="font-normal text-gray-400">(optional)</span>
+          Upload images{" "}
+          <span className="font-normal text-gray-400">(optional · up to 3)</span>
         </label>
-        <div className="flex gap-3 mt-2 mb-5">
-          <button className="flex-1 flex items-center justify-center gap-2 border border-gray-200 rounded-xl py-3 text-sm text-gray-600">
-            <ImageIcon size={16} /> Gallery
+
+        {/* Preview grid */}
+        {images.length > 0 && (
+          <div className="flex gap-2 mt-3 mb-3 flex-wrap">
+            {images.map((img, i) => (
+              <div key={i} className="relative w-24 h-24 rounded-xl overflow-hidden border border-gray-200 shrink-0">
+                <img
+                  src={img.base64}
+                  alt={img.name}
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  onClick={() => removeImage(i)}
+                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-gray-900 bg-opacity-60 flex items-center justify-center"
+                  aria-label="Remove image"
+                >
+                  <span className="text-white text-xs leading-none font-bold">✕</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Upload button — hidden when at limit */}
+        {images.length < 3 && (
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center justify-center gap-2 w-full border border-dashed border-gray-300 rounded-xl py-3 text-sm text-gray-500 mt-2 mb-5 hover:border-blue-400 hover:text-blue-600 transition-colors"
+          >
+            <ImageIcon size={16} />
+            Choose from gallery
+            {images.length > 0 && (
+              <span className="text-xs text-gray-400">({images.length}/3)</span>
+            )}
           </button>
-          <button className="flex-1 flex items-center justify-center gap-2 border border-gray-200 rounded-xl py-3 text-sm text-gray-600">
-            <Camera size={16} /> Camera
-          </button>
-        </div>
+        )}
+
+        {images.length === 3 && (
+          <p className="text-xs text-gray-400 mt-2 mb-5">Maximum of 3 images reached.</p>
+        )}
+
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={handleFileChange}
+        />
 
         <div className="flex gap-2 mb-6">
           <Lock size={14} className="text-gray-400 mt-0.5 shrink-0" />

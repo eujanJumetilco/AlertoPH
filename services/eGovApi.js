@@ -1,9 +1,17 @@
+import { analyzeImages } from "./gemini";
+
 // eGovAI
 
-export async function processReportDescription(description, location) {
+export async function processReportDescription(description, location, imageArray) {
     const baseUrl = import.meta.env.VITE_EGOV_AI_URL;
     const endpoint = `${baseUrl}/api/v1/egov/integration/ai_assistant/generate`;
     const accessToken = await generateAccessToken();
+    let imageDescriptions = "Not provided";
+
+    if (imageArray && imageArray.length > 0) {
+        imageDescriptions = await analyzeImages(imageArray);
+    }
+
 
     const systemPrompt = 
     `You are an expert text analyzer. I will provide you with a string of text, and you must perform the following tasks:
@@ -31,6 +39,7 @@ export async function processReportDescription(description, location) {
     [Report Type][Assigned Agency][Title][Summary]
 
     Location: ${location || "Not specified"}
+    User's Uploaded Image(s) Description: ${imageDescriptions}
     Input Text:
     ${description}`;
 

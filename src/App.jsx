@@ -204,7 +204,7 @@ function TopBar({ onMenu }) {
         <Menu size={20} className="text-gray-700" />
       </button>
       <div className="flex items-center gap-1.5">
-        <Landmark size={18} className="text-blue-700" />
+        <img src="/AlertoPH-icon.png" alt="AlertoPH" className="w-[23px] h-[23px] object-contain" />
         <span className="font-bold text-blue-700 text-lg">AlertoPH</span>
       </div>
       <Bell size={20} className="text-gray-700" />
@@ -237,8 +237,8 @@ function SignInScreen({ onSignIn }) {
   return (
     <div className="flex flex-col items-center justify-center h-full px-8 text-center bg-white">
       <div className="flex flex-col items-center">
-        <div className="w-24 h-24 rounded-2xl bg-blue-900 flex items-center justify-center shadow-md">
-          <Shield size={44} className="text-yellow-400" />
+        <div className="w-24 h-24 rounded-2xl bg-white flex items-center justify-center shadow-md">
+          <img src="/AlertoPH-icon.png" alt="AlertoPH" className="w-[80px] h-[80px] object-contain" />
         </div>
         <h1 className="text-2xl font-bold text-blue-700 mt-5">AlertoPH</h1>
         <p className="text-gray-400 text-sm mt-1 mb-8">Report. Help. Protect.</p>

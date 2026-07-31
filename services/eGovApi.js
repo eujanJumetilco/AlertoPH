@@ -12,7 +12,6 @@ export async function processReportDescription(description, location, imageArray
         imageDescriptions = await analyzeImages(imageArray);
     }
 
-
     const systemPrompt = 
     `You are an expert text analyzer. I will provide you with a string of text, and you must perform the following tasks:
 
@@ -42,6 +41,8 @@ export async function processReportDescription(description, location, imageArray
     User's Uploaded Image(s) Description: ${imageDescriptions}
     Input Text:
     ${description}`;
+
+    console.log("System Prompt:", systemPrompt);
 
     try {
         const response = await fetch(endpoint, {
@@ -200,6 +201,8 @@ async function generateEReportToken(){
 
 function parseReportString(responseString) {
   const regex = /\[([^\]]+)\]\s*\[([^\]]+)\]\s*\[([^\]]+)\]\s*\[([\s\S]*?)\]/;
+
+  console.log("Parsing response string:", responseString);
   
   const match = responseString.match(regex);
 

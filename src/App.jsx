@@ -95,10 +95,12 @@ function ReportsProvider({ children }) {
       category: scannedDescription.reportType.toLowerCase().replace(/\s+/g, ""),
       typeLabel: scannedDescription.reportType,
       handler: scannedDescription.assignedAgency,
+      summary: scannedDescription.summary,
       timeStamp: Date.now(),
       status: "Pending",
       description: draft.description,
       location: draft.location,
+      images: draft.images ?? [],   // ← add this
     };
     setReports((prev) => [newReport, ...prev]);
     setLastCreatedId(newReport.id);
@@ -364,7 +366,8 @@ function CreateReportScreen({ onNavigate, onSubmitted }) {
   const [time, setTime] = useState("09:41 AM");
   const [location, setLocation] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [images, setImages] = useState([]); // array of { base64, name }
+  const [images, setImages] = useState([]);
+  const [showError, setShowError] = useState(false);  // ← add this
   const fileInputRef = useRef(null);
 
   async function handleSubmit() {
@@ -379,9 +382,12 @@ function CreateReportScreen({ onNavigate, onSubmitted }) {
         date,
         time,
         location,
-        images: images.map((img) => img.base64), // pass base64 strings
+        images: images.map((img) => img.base64),
       });
       onSubmitted(newReport.id);
+    } catch (err) {                      // ← replace `finally` with try/catch/finally
+      setShowError(true);
+      setTimeout(() => setShowError(false), 60000);
     } finally {
       setIsLoading(false);
     }
@@ -416,7 +422,7 @@ function CreateReportScreen({ onNavigate, onSubmitted }) {
   if (isLoading) return <AnalyzingScreen />;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="relative flex flex-col h-full">
       <ScreenHeader title="Create Report" onBack={() => onNavigate("dashboard")} />
       <div className="flex-1 overflow-y-auto px-5 pb-6">
         <div className="flex gap-3 bg-blue-50 rounded-xl p-4 mb-5">
@@ -519,6 +525,13 @@ function CreateReportScreen({ onNavigate, onSubmitted }) {
         >
           Submit Report
         </button>
+
+        {showError && (
+          <div className="absolute inset-x-4 top-20 z-50 flex items-start gap-3 bg-red-600 text-white text-sm font-medium px-4 py-3.5 rounded-2xl shadow-lg animate-pulse">
+            <span className="text-lg leading-none">⚠️</span>
+            <p className="leading-snug">eGovAI API issue, please try again after 1 minute.</p>
+          </div>
+        )}
       </div>
       <BottomNav current="create" onNavigate={onNavigate} />
     </div>
@@ -631,7 +644,30 @@ function ReportDetailScreen({ reportId, onNavigate }) {
             <p className="text-gray-400 text-xs mb-1">Description</p>
             <p className="text-gray-700 leading-relaxed">{report.description}</p>
           </div>
+          {report.images?.length > 0 && (
+            <div>
+              <p className="text-gray-400 text-xs mb-2">Attached Images</p>
+              <div className="flex gap-2 flex-wrap">
+                {report.images.map((src, i) => (
+                  <div key={i} className="w-24 h-24 rounded-xl overflow-hidden border border-gray-200 shrink-0">
+                    <img src={src} alt={`attachment-${i + 1}`} className="w-full h-full object-cover" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
+        {report.summary && (
+          <div className="bg-blue-50 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles size={14} className="text-blue-600 shrink-0" />
+              <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
+                AI-Generated Report Summary
+              </p>
+            </div>
+            <p className="text-sm text-blue-900 leading-relaxed">{report.summary}</p>
+          </div>
+        )}
       </div>
       <BottomNav current="dashboard" onNavigate={onNavigate} />
     </div>
